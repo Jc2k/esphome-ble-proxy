@@ -141,6 +141,7 @@ def test_signed_partition_table_requires_explicit_trailing_allowance(tmp_path: P
     assert parse_partition_table(
         table, allow_trailing_signature=True
     ) == EXPECTED_MANAGED_PARTITIONS
+    validate_managed_partition_table(table, allow_trailing_signature=True)
 
 
 def test_device_artifact_build_runs_bridge_then_migration(monkeypatch) -> None:

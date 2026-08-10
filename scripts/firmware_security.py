@@ -77,7 +77,7 @@ EXPECTED_MANAGED_PARTITIONS = {
     "phy_init": PartitionEntry("phy_init", 0x01, 0x01, 0xB000, 0x1000),
     "app0": PartitionEntry("app0", 0x00, 0x10, 0x10000, 0x1C0000),
     "app1": PartitionEntry("app1", 0x00, 0x11, 0x1D0000, 0x1C0000),
-    "nvs": PartitionEntry("nvs", 0x01, 0x02, 0x390000, 0x70000),
+    "nvs": PartitionEntry("nvs", 0x01, 0x02, 0x390000, 0x6D000),
 }
 
 _PARTITION_ENTRY = struct.Struct("<HBBII16sI")
@@ -133,8 +133,12 @@ def parse_partition_table(
     return partitions
 
 
-def validate_managed_partition_table(path: Path) -> None:
-    actual = parse_partition_table(path)
+def validate_managed_partition_table(
+    path: Path, *, allow_trailing_signature: bool = False
+) -> None:
+    actual = parse_partition_table(
+        path, allow_trailing_signature=allow_trailing_signature
+    )
     if actual != EXPECTED_MANAGED_PARTITIONS:
         raise ValueError(
             "partition layout does not exactly match the managed layout: "
@@ -164,12 +168,22 @@ def verify_build(stream: FirmwareStream, migration: bool = False) -> VerifiedBui
     build = build_directory(stream, migration)
     ota_firmware = build / "firmware.ota.bin"
     factory_firmware = build / "firmware.factory.bin"
+    partition_table = build / "partition_table" / "partition-table.bin"
     generated_main = build.parent / "src" / "main.cpp"
 
-    for path in (stream.signing_key, ota_firmware, factory_firmware, generated_main):
+    for path in (
+        stream.signing_key,
+        ota_firmware,
+        factory_firmware,
+        partition_table,
+        generated_main,
+    ):
         if not path.is_file():
             raise FileNotFoundError(f"missing build input: {path}")
 
+    validate_managed_partition_table(
+        partition_table, allow_trailing_signature=True
+    )
     _verify_signature(ota_firmware, stream.signing_key)
 
     generated = generated_main.read_text()

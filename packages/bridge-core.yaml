@@ -6,6 +6,9 @@ esphome:
   name_add_mac_suffix: true
   min_version: 2026.7.3
 
+esp32:
+  partitions: ../partitions/esp32-idf-4mb-production.csv
+
 external_components:
   - source:
       type: local

@@ -1,0 +1,9 @@
+# Preserve ESPHome 2025.7.x's 4 MiB ESP-IDF layout used by the production fleet.
+# App offsets and sizes are the OTA compatibility boundary. Keeping the legacy
+# NVS size avoids a remote partition-table rewrite solely to claim 12 KiB of
+# otherwise unused flash.
+otadata, data, ota, , 0x2000,
+phy_init, data, phy, , 0x1000,
+app0, app, ota_0, , 0x1C0000,
+app1, app, ota_1, , 0x1C0000,
+nvs, data, nvs, , 0x6D000,

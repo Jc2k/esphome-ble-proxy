@@ -114,9 +114,12 @@ uv run python scripts/prepare_migration.py ip101-ethernet
 # or: ip101-wifi / pico32-wifi
 ```
 
-First inspect the existing device logs. If they already show the current layout
-(`app0` at `0x10000`, `app1` at `0x1D0000`, each `0x1C0000` bytes, and `nvs` at
-`0x390000`), skip directly to the signed migration below.
+First inspect the existing device logs. If they already show the OTA-compatible
+layout (`app0` at `0x10000`, `app1` at `0x1D0000`, each `0x1C0000` bytes, and
+`nvs` at `0x390000` with at least `0x6D000` bytes), skip directly to the signed
+migration below. The managed build deliberately preserves ESPHome 2025.7.x's
+`0x6D000` NVS allocation instead of risking a remote partition rewrite merely
+to gain 12 KiB of NVS space.
 
 For an older or unknown layout, install the small matching bridge **twice** by
 explicit IP, checking that it reconnects after each reboot. Two installs put a

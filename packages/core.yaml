@@ -7,6 +7,9 @@ esphome:
     name: jc2k.esphome-ble-proxy-${stream_slug}
     version: ${firmware_version}
 
+esp32:
+  partitions: ../partitions/esp32-idf-4mb-production.csv
+
 external_components:
   - source:
       type: local

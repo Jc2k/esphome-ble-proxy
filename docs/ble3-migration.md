@@ -11,8 +11,8 @@ logs. Never continue merely because an upload command returned success.
 - Existing API encryption key: **ready in ignored local secrets**
 - Existing ESPHome OTA password: **ready in ignored local secrets**
 - Serial recovery: **theoretically possible; avoid unless recovery is required**
-- Private artifacts: **not built**
-- Public target: `v1.0.0`
+- Private artifacts: see ignored `private-artifacts/ble3/metadata.json`
+- Public target: `v1.0.1`
 
 Do not use an existing file under `migrations/.esphome/`. Those build paths are
 shared between devices and may contain test or another device's credentials.
@@ -83,10 +83,17 @@ Require all of:
 - the partition diagnostic lists the running slot and all five partitions;
 - a controlled restart returns to a stable bridge.
 
-If `Target managed layout: YES` is reported, skip Gate 3 and continue to Gate
+If `OTA-compatible layout: YES` is reported, skip Gate 3 and continue to Gate
 4. If it reports `NO`, continue with the second bridge boot.
 
-## Gate 3: second bridge boot and partition-table update
+The first `ble3` bridge used the older diagnostic and reported `Target managed
+layout: NO` solely because NVS was `0x6D000` rather than ESPHome 2026.7.3's
+`0x70000`. This is ESPHome 2025.7.5's standard layout; all OTA/system partition
+offsets and both app sizes match. Treat this observed layout as OTA-compatible
+and **skip Gate 3**. Do not rewrite the partition table for an NVS-only size
+difference.
+
+## Gate 3: incompatible app layout only
 
 Upload the same hashed bridge a second time. After reboot, require the running
 partition offset to differ from the first bridge boot.
@@ -121,10 +128,10 @@ After reboot, the partition diagnostic must show exactly:
 | `phy_init` | `0x00B000` | `0x001000` |
 | `app0` | `0x010000` | `0x1C0000` |
 | `app1` | `0x1D0000` | `0x1C0000` |
-| `nvs` | `0x390000` | `0x070000` |
+| `nvs` | `0x390000` | `0x06D000` |
 
-Require `Target managed layout: YES` and one controlled restart before
-continuing.
+Require `Exact managed layout: YES`, `OTA-compatible layout: YES`, and one
+controlled restart before continuing.
 
 ## Gate 4: signed migration image
 
@@ -140,9 +147,9 @@ uv run esphome logs --device "$BLE3_IP" \
 Require all of:
 
 - `API encryption key persisted for credential-free updates`;
-- `Target managed layout: YES`;
+- `OTA-compatible layout: YES`;
 - Ethernet, API and Bluetooth proxy are healthy;
-- the `Firmware Update` entity offers `v1.0.0`;
+- the `Firmware Update` entity offers `v1.0.1`;
 - a controlled restart succeeds.
 
 Remain on the migration image if any check fails. It retains legacy ESPHome
@@ -150,12 +157,11 @@ OTA as the recovery path.
 
 ## Gate 5: public HTTP OTA and soak
 
-Install `v1.0.0` through the Home Assistant `Firmware Update` entity. This is
+Install `v1.0.1` through the Home Assistant `Firmware Update` entity. This is
 the final transition to signed HTTP OTA and removes legacy ESPHome OTA.
 
-After reboot, verify version `1.0.0`, encrypted API, Ethernet, Bluetooth proxy
-and the update entity. (`v1.0.0` predates the partition diagnostic; the layout
-was already verified on the migration image.) Perform one controlled power
+After reboot, verify version `1.0.1`, encrypted API, Ethernet, Bluetooth proxy
+and the update entity. Perform one controlled power
 cycle. Then soak `ble3` for at least 24 hours before preparing another device.
 
 Do not combine this migration with an API-key rotation, bootloader update,
