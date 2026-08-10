@@ -21,6 +21,8 @@ api:
 
 managed_config:
 
+partition_diagnostics:
+
 esp32_ble_tracker:
 
 bluetooth_proxy:

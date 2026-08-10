@@ -95,6 +95,10 @@ Do not start until the first public release and its Pages manifests are live.
 The Ethernet devices are the best first trial because there are no Wi-Fi
 credentials to transfer.
 
+For the first Ethernet canary, use the guarded, device-specific
+[`ble3` worksheet](docs/ble3-migration.md). It stages immutable private
+artifacts and adds explicit go/no-go checks around the partition-table update.
+
 For one target device, copy `secrets.example.yaml` to the ignored
 `migrations/secrets.yaml` and replace the values with that device's current API
 key and OTA password. For a Wi-Fi device, also add its current SSID and password. The Wi-Fi

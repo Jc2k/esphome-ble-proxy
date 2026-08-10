@@ -7,7 +7,12 @@ from pathlib import Path
 import subprocess
 import sys
 
-from firmware_security import ROOT, STREAMS, validate_private_inputs
+from firmware_security import (
+    ROOT,
+    STREAMS,
+    validate_managed_partition_table,
+    validate_private_inputs,
+)
 
 
 # Arduino-ESP32's long-standing default layout allows 0x140000 bytes per OTA
@@ -41,6 +46,8 @@ def main() -> None:
     for path in (ota_firmware, partition_table, generated_main):
         if not path.is_file():
             raise FileNotFoundError(f"missing bridge build output: {path}")
+
+    validate_managed_partition_table(partition_table)
 
     size = ota_firmware.stat().st_size
     if size > LEGACY_OTA_SLOT_SIZE:

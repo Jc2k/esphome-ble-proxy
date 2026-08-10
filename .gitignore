@@ -8,6 +8,7 @@ node_modules/
 .pnpm-store/
 release-assets/
 site/
+private-artifacts/
 **/secrets.yaml
 .firmware-signing-key-*.pem
 

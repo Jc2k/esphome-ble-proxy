@@ -6,8 +6,10 @@ from __future__ import annotations
 import base64
 import binascii
 from dataclasses import dataclass
+import hashlib
 from pathlib import Path
 import re
+import struct
 import subprocess
 import sys
 
@@ -61,10 +63,83 @@ class VerifiedBuild:
     factory_firmware: Path
 
 
+@dataclass(frozen=True)
+class PartitionEntry:
+    label: str
+    type: int
+    subtype: int
+    offset: int
+    size: int
+
+
+EXPECTED_MANAGED_PARTITIONS = {
+    "otadata": PartitionEntry("otadata", 0x01, 0x00, 0x9000, 0x2000),
+    "phy_init": PartitionEntry("phy_init", 0x01, 0x01, 0xB000, 0x1000),
+    "app0": PartitionEntry("app0", 0x00, 0x10, 0x10000, 0x1C0000),
+    "app1": PartitionEntry("app1", 0x00, 0x11, 0x1D0000, 0x1C0000),
+    "nvs": PartitionEntry("nvs", 0x01, 0x02, 0x390000, 0x70000),
+}
+
+_PARTITION_ENTRY = struct.Struct("<HBBII16sI")
+_PARTITION_MAGIC = 0x50AA
+_PARTITION_MD5_MAGIC = 0xEBEB
+_PARTITION_TABLE_SIZE = 0xC00
+
+
 def build_directory(stream: FirmwareStream, migration: bool) -> Path:
     config = stream.migration_config if migration else stream.release_config
     name = stream.migration_build_name if migration else stream.build_name
     return config.parent / ".esphome" / "build" / name / "build"
+
+
+def parse_partition_table(
+    path: Path, *, allow_trailing_signature: bool = False
+) -> dict[str, PartitionEntry]:
+    data = path.read_bytes()
+    if len(data) < _PARTITION_TABLE_SIZE or (
+        len(data) != _PARTITION_TABLE_SIZE and not allow_trailing_signature
+    ):
+        raise ValueError(
+            f"partition table must be {_PARTITION_TABLE_SIZE} bytes, got {len(data)}"
+        )
+    data = data[:_PARTITION_TABLE_SIZE]
+
+    partitions: dict[str, PartitionEntry] = {}
+    checksum_found = False
+    for offset in range(0, len(data), _PARTITION_ENTRY.size):
+        magic, type_, subtype, address, size, raw_label, _flags = (
+            _PARTITION_ENTRY.unpack_from(data, offset)
+        )
+        if magic == 0xFFFF:
+            break
+        if magic == _PARTITION_MD5_MAGIC:
+            checksum_found = True
+            expected_checksum = data[offset + 16 : offset + 32]
+            actual_checksum = hashlib.md5(
+                data[:offset], usedforsecurity=False
+            ).digest()
+            if actual_checksum != expected_checksum:
+                raise ValueError("partition table MD5 checksum is invalid")
+            break
+        if magic != _PARTITION_MAGIC:
+            raise ValueError(f"invalid partition-table magic 0x{magic:04X} at 0x{offset:X}")
+        label = raw_label.split(b"\0", 1)[0].decode("ascii")
+        if not label or label in partitions:
+            raise ValueError(f"invalid or duplicate partition label: {label!r}")
+        partitions[label] = PartitionEntry(label, type_, subtype, address, size)
+
+    if not checksum_found:
+        raise ValueError("partition table has no MD5 checksum entry")
+    return partitions
+
+
+def validate_managed_partition_table(path: Path) -> None:
+    actual = parse_partition_table(path)
+    if actual != EXPECTED_MANAGED_PARTITIONS:
+        raise ValueError(
+            "partition layout does not exactly match the managed layout: "
+            f"expected {EXPECTED_MANAGED_PARTITIONS}, got {actual}"
+        )
 
 
 def _verify_signature(image: Path, signing_key: Path) -> None:
