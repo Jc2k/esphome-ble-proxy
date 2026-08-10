@@ -155,6 +155,26 @@ Require all of:
 Remain on the migration image if any check fails. It retains legacy ESPHome
 OTA as the recovery path.
 
+## Gate 4.5: credential-free verification image
+
+Before removing legacy OTA, install the staged verification image. It contains
+no API encryption key and does not write one; successful encrypted API access
+therefore proves that ESPHome loaded the saved key from NVS. It retains the
+password-protected legacy OTA recovery path.
+
+```sh
+(cd private-artifacts/ble3 && shasum -a 256 -c SHA256SUMS)
+uv run esphome upload --device "$BLE3_IP" \
+  --file private-artifacts/ble3/verification.firmware.bin \
+  migrations/ip101-ethernet.verification.yaml
+uv run esphome logs --device "$BLE3_IP" \
+  migrations/ip101-ethernet.logs.yaml
+```
+
+Require encrypted API and Home Assistant to reconnect, `API key migration: not
+requested`, both partition-layout checks to report `YES`, and Ethernet/BLE/HTTP
+OTA to remain healthy. Only then continue.
+
 ## Gate 5: public HTTP OTA and soak
 
 Install `v1.0.1` through the Home Assistant `Firmware Update` entity. This is

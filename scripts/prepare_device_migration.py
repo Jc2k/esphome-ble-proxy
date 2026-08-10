@@ -126,6 +126,11 @@ def build(stream_slug: str) -> None:
         cwd=ROOT,
         check=True,
     )
+    subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "prepare_verification.py"), stream_slug],
+        cwd=ROOT,
+        check=True,
+    )
 
 
 def verify_published_release(stream_slug: str, signing_key: Path) -> dict[str, str | int]:
@@ -228,9 +233,11 @@ def stage(args: argparse.Namespace) -> Path:
         / "build"
     )
     migration_build = build_directory(stream, migration=True)
+    verification_build = build_directory(stream, verification=True)
     sources = {
         "bridge.firmware.bin": bridge_build / "firmware.ota.bin",
         "migration.firmware.bin": migration_build / "firmware.ota.bin",
+        "verification.firmware.bin": verification_build / "firmware.ota.bin",
         "partition-table.bin": bridge_build / "partition_table" / "partition-table.bin",
         "partitions.csv": bridge_build.parent / "partitions.csv",
     }
@@ -239,12 +246,18 @@ def stage(args: argparse.Namespace) -> Path:
             raise FileNotFoundError(f"missing {name}: {source}")
 
     migration_partition_table = migration_build / "partition_table" / "partition-table.bin"
+    verification_partition_table = (
+        verification_build / "partition_table" / "partition-table.bin"
+    )
     bridge_partitions = parse_partition_table(sources["partition-table.bin"])
     migration_partitions = parse_partition_table(
         migration_partition_table, allow_trailing_signature=True
     )
-    if bridge_partitions != migration_partitions:
-        raise RuntimeError("bridge and migration partition layouts differ")
+    verification_partitions = parse_partition_table(
+        verification_partition_table, allow_trailing_signature=True
+    )
+    if not bridge_partitions == migration_partitions == verification_partitions:
+        raise RuntimeError("transition firmware partition layouts differ")
     validate_managed_partition_table(sources["partition-table.bin"])
 
     output_root_created = not output_root.exists()

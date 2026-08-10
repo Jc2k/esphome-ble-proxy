@@ -26,9 +26,11 @@ class FirmwareStream:
     release_config: Path
     bridge_config: Path
     migration_config: Path
+    verification_config: Path
     build_name: str
     bridge_build_name: str
     migration_build_name: str
+    verification_build_name: str
     signing_key: Path
 
 
@@ -39,9 +41,11 @@ def _stream(slug: str, display_name: str) -> FirmwareStream:
         release_config=ROOT / "firmware" / f"{slug}.release.yaml",
         bridge_config=ROOT / "migrations" / f"{slug}.bridge.yaml",
         migration_config=ROOT / "migrations" / f"{slug}.migration.yaml",
+        verification_config=ROOT / "migrations" / f"{slug}.verification.yaml",
         build_name=slug,
         bridge_build_name=f"{slug}-bridge",
         migration_build_name=f"{slug}-migration",
+        verification_build_name=f"{slug}-verification",
         signing_key=ROOT / f".firmware-signing-key-{slug}.pem",
     )
 
@@ -86,9 +90,20 @@ _PARTITION_MD5_MAGIC = 0xEBEB
 _PARTITION_TABLE_SIZE = 0xC00
 
 
-def build_directory(stream: FirmwareStream, migration: bool) -> Path:
-    config = stream.migration_config if migration else stream.release_config
-    name = stream.migration_build_name if migration else stream.build_name
+def build_directory(
+    stream: FirmwareStream, migration: bool = False, verification: bool = False
+) -> Path:
+    if migration and verification:
+        raise ValueError("a build cannot be both migration and verification")
+    if migration:
+        config = stream.migration_config
+        name = stream.migration_build_name
+    elif verification:
+        config = stream.verification_config
+        name = stream.verification_build_name
+    else:
+        config = stream.release_config
+        name = stream.build_name
     return config.parent / ".esphome" / "build" / name / "build"
 
 
@@ -164,8 +179,10 @@ def _verify_signature(image: Path, signing_key: Path) -> None:
     )
 
 
-def verify_build(stream: FirmwareStream, migration: bool = False) -> VerifiedBuild:
-    build = build_directory(stream, migration)
+def verify_build(
+    stream: FirmwareStream, migration: bool = False, verification: bool = False
+) -> VerifiedBuild:
+    build = build_directory(stream, migration, verification)
     ota_firmware = build / "firmware.ota.bin"
     factory_firmware = build / "firmware.factory.bin"
     partition_table = build / "partition_table" / "partition-table.bin"
@@ -190,6 +207,7 @@ def verify_build(stream: FirmwareStream, migration: bool = False) -> VerifiedBui
     setter = "->set_api_encryption_key("
     wifi_action = "WiFiConfigureAction"
     wifi_save = "->set_save("
+    legacy_ota = "ESPHomeOTAComponent"
     if migration:
         if setter not in generated:
             raise RuntimeError("migration firmware does not persist the API encryption key")
@@ -202,6 +220,12 @@ def verify_build(stream: FirmwareStream, migration: bool = False) -> VerifiedBui
             raise RuntimeError("public firmware embeds an API encryption key")
         if wifi_action in generated:
             raise RuntimeError("public firmware embeds a Wi-Fi provisioning action")
+
+    if migration or verification:
+        if legacy_ota not in generated:
+            raise RuntimeError("private transition firmware has no legacy OTA recovery path")
+    elif legacy_ota in generated:
+        raise RuntimeError("public firmware unexpectedly retains legacy ESPHome OTA")
 
     return VerifiedBuild(stream, ota_firmware, factory_firmware)
 

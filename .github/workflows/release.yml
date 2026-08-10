@@ -50,7 +50,7 @@ jobs:
 
       - name: Validate release and migration configurations
         run: |
-          for config in firmware/*.release.yaml migrations/*.bridge.yaml migrations/*.migration.yaml migrations/*.logs.yaml; do
+          for config in firmware/*.release.yaml migrations/*.bridge.yaml migrations/*.migration.yaml migrations/*.verification.yaml migrations/*.logs.yaml; do
             uv run esphome config "$config"
           done
 
@@ -58,6 +58,12 @@ jobs:
         run: |
           for stream in ip101-ethernet ip101-wifi pico32-wifi; do
             uv run python scripts/prepare_bridge.py "$stream"
+          done
+
+      - name: Compile credential-free verification images
+        run: |
+          for stream in ip101-ethernet ip101-wifi pico32-wifi; do
+            uv run python scripts/prepare_verification.py "$stream"
           done
 
       - name: Compile and verify every signed release stream

@@ -156,6 +156,7 @@ def test_device_artifact_build_runs_bridge_then_migration(monkeypatch) -> None:
     assert [Path(command[1]).name for command in commands] == [
         "prepare_bridge.py",
         "prepare_migration.py",
+        "prepare_verification.py",
     ]
     assert all(command[-1] == "ip101-ethernet" for command in commands)
 

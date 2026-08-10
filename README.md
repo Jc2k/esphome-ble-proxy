@@ -175,7 +175,7 @@ public image until connectivity has survived a power cycle.
 cp tests/secrets.ci.yaml migrations/secrets.yaml
 uv sync --locked
 uv run pytest
-for config in firmware/*.release.yaml migrations/*.bridge.yaml migrations/*.migration.yaml migrations/*.logs.yaml; do
+for config in firmware/*.release.yaml migrations/*.bridge.yaml migrations/*.migration.yaml migrations/*.verification.yaml migrations/*.logs.yaml; do
   uv run esphome config "$config"
 done
 for stream in ip101-ethernet ip101-wifi pico32-wifi; do

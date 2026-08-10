@@ -1,0 +1,18 @@
+substitutions:
+  firmware_version: "0.0.0"
+  stream_slug: ip101-ethernet
+  device_name: ble-proxy-ip101-ethernet
+  friendly_name: BLE Proxy IP101 Ethernet
+  firmware_signing_key: ../.firmware-signing-key-ip101-ethernet.pem
+  firmware_manifest_url: https://unrouted.uk/esphome-ble-proxy/firmware/ip101-ethernet/manifest.json
+
+packages:
+  core: !include ../packages/core.yaml
+  hardware: !include ../packages/hardware-ip101.yaml
+  network: !include ../packages/network-ethernet.yaml
+  security: !include ../packages/security-signed-ota.yaml
+  updates: !include ../packages/managed-updates.yaml
+  api_verification: !include ../packages/migrate-verify-api-key.yaml
+
+esphome:
+  build_path: build/ip101-ethernet-verification

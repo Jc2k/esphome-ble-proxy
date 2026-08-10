@@ -1,0 +1,7 @@
+# Recovery path for proving that credential-free firmware can load the API key
+# persisted by the migration image. This package deliberately retains legacy
+# ESPHome OTA but does not embed or write the API encryption key.
+ota:
+  - id: legacy_esphome_ota
+    platform: esphome
+    password: !secret legacy_ota_password
