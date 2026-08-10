@@ -147,6 +147,8 @@ install the first signed migration image:
 ```sh
 uv run esphome upload --device 192.0.2.10 \
   migrations/ip101-ethernet.migration.yaml
+uv run esphome logs --device 192.0.2.10 \
+  migrations/ip101-ethernet.logs.yaml
 ```
 
 After reboot, inspect logs before installing public firmware. Require all of:
@@ -173,7 +175,7 @@ public image until connectivity has survived a power cycle.
 cp tests/secrets.ci.yaml migrations/secrets.yaml
 uv sync --locked
 uv run pytest
-for config in firmware/*.release.yaml migrations/*.bridge.yaml migrations/*.migration.yaml; do
+for config in firmware/*.release.yaml migrations/*.bridge.yaml migrations/*.migration.yaml migrations/*.logs.yaml; do
   uv run esphome config "$config"
 done
 for stream in ip101-ethernet ip101-wifi pico32-wifi; do

@@ -141,7 +141,7 @@ uv run esphome upload --device "$BLE3_IP" \
   --file private-artifacts/ble3/migration.firmware.bin \
   migrations/ip101-ethernet.migration.yaml
 uv run esphome logs --device "$BLE3_IP" \
-  migrations/ip101-ethernet.migration.yaml
+  migrations/ip101-ethernet.logs.yaml
 ```
 
 Require all of:

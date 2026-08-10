@@ -50,7 +50,7 @@ jobs:
 
       - name: Validate release and migration configurations
         run: |
-          for config in firmware/*.release.yaml migrations/*.bridge.yaml migrations/*.migration.yaml; do
+          for config in firmware/*.release.yaml migrations/*.bridge.yaml migrations/*.migration.yaml migrations/*.logs.yaml; do
             uv run esphome config "$config"
           done
 

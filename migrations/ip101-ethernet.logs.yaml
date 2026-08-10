@@ -1,0 +1,9 @@
+# Diagnostics-only client overlay. Never compile or upload this configuration:
+# api.encryption.key would prevent the migration component from writing the key
+# to preferences. The underlying migration image deliberately omits it.
+packages:
+  migration: !include ip101-ethernet.migration.yaml
+
+api:
+  encryption:
+    key: !secret api_encryption_key

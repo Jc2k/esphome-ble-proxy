@@ -1,11 +1,5 @@
 # This package is only included by local migration builds. It deliberately
 # embeds the existing device's API key long enough to save it to preferences.
-api:
-  encryption:
-    # Also lets local ESPHome diagnostics authenticate to the migration image.
-    # Public release configurations do not include this package.
-    key: !secret api_encryption_key
-
 managed_config:
   api_encryption_key: !secret api_encryption_key
 
