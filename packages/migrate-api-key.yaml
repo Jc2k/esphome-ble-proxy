@@ -1,0 +1,9 @@
+# This package is only included by local migration builds. It deliberately
+# embeds the existing device's API key long enough to save it to preferences.
+managed_config:
+  api_encryption_key: !secret api_encryption_key
+
+ota:
+  - id: legacy_esphome_ota
+    platform: esphome
+    password: !secret legacy_ota_password

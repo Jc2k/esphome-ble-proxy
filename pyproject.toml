@@ -1,0 +1,18 @@
+[project]
+name = "esphome-ble-proxy"
+version = "0.1.0"
+description = "Credential-free, self-updating ESPHome Bluetooth proxy firmware"
+readme = "README.md"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    "esphome==2026.7.3",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4,<10",
+]
+
+[tool.uv]
+package = false
+required-version = ">=0.9.0"

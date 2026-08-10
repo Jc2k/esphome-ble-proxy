@@ -1,0 +1,3 @@
+# Private per-device inputs and generated ESPHome build trees.
+/.esphome/
+/secrets.yaml

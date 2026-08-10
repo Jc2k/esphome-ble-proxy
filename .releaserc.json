@@ -1,0 +1,31 @@
+{
+  "branches": ["main"],
+  "tagFormat": "v${version}",
+  "plugins": [
+    "@semantic-release/commit-analyzer",
+    "@semantic-release/release-notes-generator",
+    [
+      "@semantic-release/exec",
+      {
+        "prepareCmd": "uv run python scripts/prepare_release.py ${nextRelease.version}"
+      }
+    ],
+    [
+      "@semantic-release/github",
+      {
+        "assets": [
+          {"path": "release-assets/ip101-ethernet.firmware.bin", "label": "IP101 Ethernet OTA firmware"},
+          {"path": "release-assets/ip101-ethernet.firmware.factory.bin", "label": "IP101 Ethernet factory firmware"},
+          {"path": "release-assets/ip101-ethernet.manifest.json", "label": "IP101 Ethernet OTA manifest"},
+          {"path": "release-assets/ip101-wifi.firmware.bin", "label": "IP101 hardware Wi-Fi OTA firmware"},
+          {"path": "release-assets/ip101-wifi.firmware.factory.bin", "label": "IP101 hardware Wi-Fi factory firmware"},
+          {"path": "release-assets/ip101-wifi.manifest.json", "label": "IP101 hardware Wi-Fi OTA manifest"},
+          {"path": "release-assets/pico32-wifi.firmware.bin", "label": "PICO32 Wi-Fi OTA firmware"},
+          {"path": "release-assets/pico32-wifi.firmware.factory.bin", "label": "PICO32 Wi-Fi factory firmware"},
+          {"path": "release-assets/pico32-wifi.manifest.json", "label": "PICO32 Wi-Fi OTA manifest"},
+          {"path": "release-assets/SHA256SUMS", "label": "Release SHA-256 checksums"}
+        ]
+      }
+    ]
+  ]
+}

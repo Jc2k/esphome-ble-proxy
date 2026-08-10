@@ -1,0 +1,22 @@
+version: 2
+
+updates:
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    allow:
+      - dependency-name: "esphome"
+    commit-message:
+      # ESPHome updates produce a patch release through semantic-release.
+      prefix: "fix"
+      include: "scope"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      # Actions-only updates do not produce firmware releases.
+      prefix: "ci"
+      include: "scope"

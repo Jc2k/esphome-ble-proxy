@@ -1,0 +1,17 @@
+substitutions:
+  firmware_version: "0.0.0"
+  stream_slug: pico32-wifi
+  device_name: ble-proxy-pico32-wifi
+  friendly_name: BLE Proxy PICO32 Wi-Fi
+  firmware_signing_key: ../.firmware-signing-key-pico32-wifi.pem
+  firmware_manifest_url: https://unrouted.uk/esphome-ble-proxy/firmware/pico32-wifi/manifest.json
+
+packages:
+  core: !include ../packages/core.yaml
+  hardware: !include ../packages/hardware-pico32.yaml
+  network: !include ../packages/network-wifi.yaml
+  security: !include ../packages/security-signed-ota.yaml
+  updates: !include ../packages/managed-updates.yaml
+
+esphome:
+  build_path: build/pico32-wifi

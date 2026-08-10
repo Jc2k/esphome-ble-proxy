@@ -1,0 +1,9 @@
+esp32:
+  framework:
+    advanced:
+      # ECDSA Secure Boot V1 signatures work on every original ESP32 revision.
+      # This authenticates OTA images without remotely burning eFuses.
+      signed_ota_verification:
+        signing_key: ${firmware_signing_key}
+        signing_scheme: ecdsa_v1
+      enable_ota_downgrade_protection: true

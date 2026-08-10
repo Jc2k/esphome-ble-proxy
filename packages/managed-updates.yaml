@@ -1,0 +1,28 @@
+http_request:
+  verify_ssl: true
+  timeout: 30s
+
+update:
+  - id: managed_firmware_update
+    platform: http_request
+    name: Firmware Update
+    source: ${firmware_manifest_url}
+    update_interval: 6h
+
+ota:
+  - id: managed_http_ota
+    platform: http_request
+
+# Authenticated recovery action for installing a same-key signed image. The
+# ECDSA signature is the authority; MD5 detects transfer corruption.
+api:
+  actions:
+    - action: install_signed_firmware
+      variables:
+        url: string
+        expected_md5: string
+      then:
+        - ota.http_request.flash:
+            id: managed_http_ota
+            url: !lambda return url;
+            md5: !lambda return expected_md5;

@@ -1,0 +1,15 @@
+substitutions:
+  device_name: ble-pico32-wifi-bridge
+  friendly_name: BLE Proxy PICO32 Wi-Fi Bridge
+
+packages:
+  core: !include ../packages/bridge-core.yaml
+  network: !include ../packages/bridge-network-wifi.yaml
+
+esp32:
+  board: pico32
+  framework:
+    type: esp-idf
+
+esphome:
+  build_path: build/pico32-wifi-bridge

@@ -1,0 +1,4 @@
+esp32:
+  board: pico32
+  framework:
+    type: esp-idf

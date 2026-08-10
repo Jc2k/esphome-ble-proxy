@@ -1,0 +1,46 @@
+esphome:
+  name: ${device_name}
+  friendly_name: ${friendly_name}
+  name_add_mac_suffix: true
+  min_version: 2026.7.3
+  project:
+    name: jc2k.esphome-ble-proxy-${stream_slug}
+    version: ${firmware_version}
+
+external_components:
+  - source:
+      type: local
+      path: ../components
+
+logger:
+
+# Migration images save the existing per-device key. Public images contain no
+# key and the API loads the saved key from flash.
+api:
+  encryption:
+
+managed_config:
+
+esp32_ble_tracker:
+
+bluetooth_proxy:
+  active: true
+
+button:
+  - platform: safe_mode
+    name: Safe Mode Boot
+    entity_category: diagnostic
+  - platform: restart
+    name: Restart
+    entity_category: diagnostic
+
+sensor:
+  - platform: uptime
+    name: Uptime
+    entity_category: diagnostic
+    update_interval: 60s
+
+text_sensor:
+  - platform: version
+    name: ESPHome Version
+    entity_category: diagnostic

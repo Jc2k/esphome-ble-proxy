@@ -1,0 +1,19 @@
+# Private, deliberately minimal transition firmware. It is installed twice so
+# both legacy OTA slots remain bootable while the partition table is upgraded.
+esphome:
+  name: ${device_name}
+  friendly_name: ${friendly_name}
+  name_add_mac_suffix: true
+  min_version: 2026.7.3
+
+logger:
+
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+ota:
+  - id: bridge_esphome_ota
+    platform: esphome
+    password: !secret legacy_ota_password
+    allow_partition_access: true

@@ -1,0 +1,22 @@
+{
+  "name": "esphome-ble-proxy-release",
+  "version": "0.0.0-development",
+  "private": true,
+  "description": "Release tooling for self-updating ESPHome Bluetooth proxies",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Jc2k/esphome-ble-proxy.git"
+  },
+  "engines": {
+    "node": ">=24.10.0"
+  },
+  "packageManager": "pnpm@11.9.0",
+  "scripts": {
+    "semantic-release": "semantic-release"
+  },
+  "devDependencies": {
+    "@semantic-release/exec": "7.1.0",
+    "@semantic-release/github": "12.0.9",
+    "semantic-release": "25.0.8"
+  }
+}

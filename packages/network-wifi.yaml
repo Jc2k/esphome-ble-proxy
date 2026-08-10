@@ -1,0 +1,18 @@
+# No station credentials are compiled into public firmware. Credentials entered
+# by the migration action or captive portal survive subsequent OTA updates.
+wifi:
+  ap: {}
+
+captive_portal:
+
+sensor:
+  - platform: wifi_signal
+    name: Wi-Fi Signal
+    entity_category: diagnostic
+    update_interval: 60s
+
+text_sensor:
+  - platform: wifi_info
+    ip_address:
+      name: IP Address
+      entity_category: diagnostic

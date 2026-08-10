@@ -1,0 +1,15 @@
+substitutions:
+  device_name: ble-ip101-eth-bridge
+  friendly_name: BLE Proxy IP101 Ethernet Bridge
+
+packages:
+  core: !include ../packages/bridge-core.yaml
+  network: !include ../packages/bridge-network-ethernet.yaml
+
+esp32:
+  board: esp32doit-devkit-v1
+  framework:
+    type: esp-idf
+
+esphome:
+  build_path: build/ip101-ethernet-bridge

@@ -1,0 +1,162 @@
+name: Build and release firmware
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: firmware-${{ github.workflow }}-${{ github.ref }}
+  # Serialize main releases; superseded branch/PR builds can be cancelled.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  build:
+    name: Test and build all firmware streams
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version-file: .python-version
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          version: "0.12.0"
+          enable-cache: true
+
+      - name: Install Python dependencies
+        run: uv sync --locked
+
+      - name: Create build-only secrets
+        # These public test values are only for parsing migration configs.
+        run: cp tests/secrets.ci.yaml migrations/secrets.yaml
+
+      - name: Create ephemeral stream signing keys
+        run: |
+          for stream in ip101-ethernet ip101-wifi pico32-wifi; do
+            uv run python -m espsecure generate-signing-key \
+              --version 1 ".firmware-signing-key-${stream}.pem"
+          done
+
+      - name: Run host tests
+        run: uv run pytest
+
+      - name: Validate release and migration configurations
+        run: |
+          for config in firmware/*.release.yaml migrations/*.bridge.yaml migrations/*.migration.yaml; do
+            uv run esphome config "$config"
+          done
+
+      - name: Compile legacy-sized bridge images
+        run: |
+          for stream in ip101-ethernet ip101-wifi pico32-wifi; do
+            uv run python scripts/prepare_bridge.py "$stream"
+          done
+
+      - name: Compile and verify every signed release stream
+        run: uv run python scripts/prepare_release.py 0.0.1
+
+  release:
+    name: Create semantic release
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      pages: read
+    outputs:
+      published: ${{ steps.release-state.outputs.published }}
+    steps:
+      - name: Check out repository history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version-file: .python-version
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          version: "0.12.0"
+          enable-cache: true
+
+      - name: Install Python dependencies
+        run: uv sync --locked
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install release dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Materialize firmware signing keys
+        env:
+          KEY_IP101_ETHERNET: ${{ secrets.FIRMWARE_SIGNING_KEY_IP101_ETHERNET }}
+          KEY_IP101_WIFI: ${{ secrets.FIRMWARE_SIGNING_KEY_IP101_WIFI }}
+          KEY_PICO32_WIFI: ${{ secrets.FIRMWARE_SIGNING_KEY_PICO32_WIFI }}
+        run: |
+          test -n "$KEY_IP101_ETHERNET"
+          test -n "$KEY_IP101_WIFI"
+          test -n "$KEY_PICO32_WIFI"
+          umask 077
+          printf '%s\n' "$KEY_IP101_ETHERNET" > .firmware-signing-key-ip101-ethernet.pem
+          printf '%s\n' "$KEY_IP101_WIFI" > .firmware-signing-key-ip101-wifi.pem
+          printf '%s\n' "$KEY_PICO32_WIFI" > .firmware-signing-key-pico32-wifi.pem
+
+      - name: Run semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm semantic-release
+
+      - name: Detect a published release
+        id: release-state
+        run: |
+          if test -f site/firmware/ip101-ethernet/manifest.json; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Configure GitHub Pages
+        if: steps.release-state.outputs.published == 'true'
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+
+      - name: Upload GitHub Pages artifact
+        if: steps.release-state.outputs.published == 'true'
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site
+
+  pages:
+    name: Publish OTA releases to GitHub Pages
+    if: needs.release.outputs.published == 'true'
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0

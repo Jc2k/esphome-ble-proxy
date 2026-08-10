@@ -1,0 +1,16 @@
+.cache/
+.esphome/
+.pytest_cache/
+.release-*.yaml
+.venv/
+__pycache__/
+node_modules/
+.pnpm-store/
+release-assets/
+site/
+**/secrets.yaml
+.firmware-signing-key-*.pem
+
+# The source configurations contain live production credentials. They are
+# retained locally for the migration but must never enter the public repo.
+migrate_from/
