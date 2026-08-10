@@ -1,3 +1,4 @@
+import argparse
 from pathlib import Path
 import hashlib
 import struct
@@ -19,6 +20,7 @@ from firmware_security import (  # noqa: E402
 )
 from prepare_device_migration import (  # noqa: E402
     build as build_device_artifacts,
+    device_address,
     require_device_credentials,
 )
 
@@ -178,3 +180,14 @@ def test_device_staging_rejects_ci_credentials(tmp_path: Path) -> None:
     )
     with pytest.raises(ValueError, match="CI-only credentials"):
         require_device_credentials(secrets, "ble3")
+
+
+@pytest.mark.parametrize("value", ["10.192.170.143", "192.168.1.42"])
+def test_device_staging_accepts_reserved_ipv4(value: str) -> None:
+    assert str(device_address(value)) == value
+
+
+@pytest.mark.parametrize("value", ["not-an-ip", "0.0.0.0", "127.0.0.1", "224.0.0.1"])
+def test_device_staging_rejects_unsafe_ipv4(value: str) -> None:
+    with pytest.raises(argparse.ArgumentTypeError):
+        device_address(value)

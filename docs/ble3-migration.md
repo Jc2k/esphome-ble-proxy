@@ -7,9 +7,10 @@ logs. Never continue merely because an upload command returned success.
 
 - Device: `ble3`
 - Stream: `ip101-ethernet`
-- Device IPv4/DHCP reservation: **not provided**
-- Existing API encryption key: **not provided**
-- Existing ESPHome OTA password: **not provided**
+- Device IPv4/DHCP reservation: `10.192.170.143`
+- Existing API encryption key: **ready in ignored local secrets**
+- Existing ESPHome OTA password: **ready in ignored local secrets**
+- Serial recovery: **theoretically possible; avoid unless recovery is required**
 - Private artifacts: **not built**
 - Public target: `v1.0.0`
 
@@ -40,7 +41,8 @@ shared between devices and may contain test or another device's credentials.
 3. Require a clean, reviewed worktree, then build and stage the artifacts:
 
    ```sh
-   uv run python scripts/prepare_device_migration.py ble3
+   uv run python scripts/prepare_device_migration.py ble3 \
+     --device-address 10.192.170.143
    (cd private-artifacts/ble3 && shasum -a 256 -c SHA256SUMS)
    ```
 
@@ -55,7 +57,7 @@ different device.
 Set the explicit reserved address; do not use mDNS during this procedure:
 
 ```sh
-export BLE3_IP="REPLACE_WITH_RESERVED_IPV4"
+export BLE3_IP="10.192.170.143"
 uv run esphome logs --device "$BLE3_IP" migrate_from/ble3.yaml
 ```
 

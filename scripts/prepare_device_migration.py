@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 from datetime import datetime, timezone
 import hashlib
+from ipaddress import AddressValueError, IPv4Address
 import json
 import os
 from pathlib import Path
@@ -34,6 +35,18 @@ DEVICE_STREAMS = {
     "ble1": "ip101-ethernet",
     "ble3": "ip101-ethernet",
 }
+
+
+def device_address(value: str) -> IPv4Address:
+    try:
+        address = IPv4Address(value)
+    except AddressValueError as error:
+        raise argparse.ArgumentTypeError(f"invalid IPv4 address: {value}") from error
+    if address.is_unspecified or address.is_loopback or address.is_link_local or address.is_multicast:
+        raise argparse.ArgumentTypeError(
+            f"IPv4 address is not suitable for a reserved device address: {address}"
+        )
+    return address
 
 
 def sha256(path: Path) -> str:
@@ -262,6 +275,7 @@ def stage(args: argparse.Namespace) -> Path:
 
         metadata = {
             "device": args.device,
+            "device_address": str(args.device_address),
             "stream": stream.slug,
             "created_at": datetime.now(timezone.utc).isoformat(),
             "source_commit": git_output("rev-parse", "HEAD"),
@@ -299,6 +313,12 @@ def stage(args: argparse.Namespace) -> Path:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("device", choices=sorted(DEVICE_STREAMS))
+    parser.add_argument(
+        "--device-address",
+        type=device_address,
+        required=True,
+        help="reserved IPv4 address of the exact migration target",
+    )
     parser.add_argument(
         "--output-root",
         type=Path,
