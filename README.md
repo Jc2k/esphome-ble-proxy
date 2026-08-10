@@ -152,7 +152,7 @@ uv run esphome upload --device 192.0.2.10 \
 After reboot, inspect logs before installing public firmware. Require all of:
 
 - the expected original ESP32 chip revision and flash size are reported;
-- `API encryption key persisted for credential-free updates` appears;
+- `API key migration: succeeded` appears in the configuration dump;
 - Ethernet reconnects, or Wi-Fi reports that its credentials were persisted;
 - the Bluetooth proxy and Home Assistant API remain healthy; and
 - the `Firmware Update` entity sees the correct stream/version.

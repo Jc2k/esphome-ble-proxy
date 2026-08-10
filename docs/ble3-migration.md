@@ -146,7 +146,7 @@ uv run esphome logs --device "$BLE3_IP" \
 
 Require all of:
 
-- `API encryption key persisted for credential-free updates`;
+- `API key migration: succeeded`;
 - `OTA-compatible layout: YES`;
 - Ethernet, API and Bluetooth proxy are healthy;
 - the `Firmware Update` entity offers `v1.0.1`;
