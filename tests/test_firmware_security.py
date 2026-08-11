@@ -19,8 +19,10 @@ from firmware_security import (  # noqa: E402
     validate_version,
 )
 from prepare_device_migration import (  # noqa: E402
+    DEVICE_STREAMS,
     build as build_device_artifacts,
     device_address,
+    require_credentials_match_legacy_config,
     require_device_credentials,
 )
 
@@ -161,6 +163,16 @@ def test_device_artifact_build_runs_bridge_then_migration(monkeypatch) -> None:
     assert all(command[-1] == "ip101-ethernet" for command in commands)
 
 
+def test_device_staging_supports_every_production_device() -> None:
+    assert DEVICE_STREAMS == {
+        "ble1": "ip101-ethernet",
+        "ble2": "ip101-wifi",
+        "ble3": "ip101-ethernet",
+        "bedroom-proxy": "pico32-wifi",
+        "kitchen-proxy": "pico32-wifi",
+    }
+
+
 def test_device_staging_credentials_are_bound_to_target(tmp_path: Path) -> None:
     secrets = tmp_path / "secrets.yaml"
     secrets.write_text(
@@ -182,6 +194,37 @@ def test_device_staging_rejects_ci_credentials(tmp_path: Path) -> None:
     )
     with pytest.raises(ValueError, match="CI-only credentials"):
         require_device_credentials(secrets, "ble3")
+
+
+def test_device_staging_matches_wifi_credentials_to_legacy_config(
+    tmp_path: Path,
+) -> None:
+    secrets = tmp_path / "secrets.yaml"
+    secrets.write_text(
+        'api_encryption_key: "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI="\n'
+        'legacy_ota_password: "device-specific-password"\n'
+        'wifi_ssid: "production-network"\n'
+        'wifi_password: "production-wifi-password"\n'
+    )
+    legacy = tmp_path / "kitchen-proxy.yaml"
+    legacy.write_text(
+        'api:\n'
+        '  encryption:\n'
+        '    key: "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI="\n'
+        'ota:\n'
+        '  - platform: esphome\n'
+        '    password: "device-specific-password"\n'
+        'wifi:\n'
+        '  ssid: "production-network"\n'
+        '  password: "production-wifi-password"\n'
+    )
+
+    require_credentials_match_legacy_config(secrets, legacy, wifi=True)
+
+    secrets.write_text(secrets.read_text().replace("production-network", "wrong-network"))
+    with pytest.raises(ValueError, match="wifi_ssid") as error:
+        require_credentials_match_legacy_config(secrets, legacy, wifi=True)
+    assert "wrong-network" not in str(error.value)
 
 
 @pytest.mark.parametrize("value", ["10.192.170.143", "192.168.1.42"])

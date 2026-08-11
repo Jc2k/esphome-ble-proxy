@@ -1,3 +1,7 @@
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
+  # Temporary recovery path if the copied station credentials are wrong.
+  ap: {}
+
+captive_portal:

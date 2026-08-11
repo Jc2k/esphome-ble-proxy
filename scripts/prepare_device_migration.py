@@ -33,7 +33,10 @@ from firmware_security import (
 
 DEVICE_STREAMS = {
     "ble1": "ip101-ethernet",
+    "ble2": "ip101-wifi",
     "ble3": "ip101-ethernet",
+    "bedroom-proxy": "pico32-wifi",
+    "kitchen-proxy": "pico32-wifi",
 }
 
 
@@ -112,6 +115,59 @@ def require_device_credentials(path: Path, device: str) -> None:
         raise ValueError(
             "refusing to stage public CI-only credentials: "
             + ", ".join(reused_ci_keys)
+        )
+
+
+def require_credentials_match_legacy_config(
+    secrets_path: Path, legacy_config_path: Path, *, wifi: bool
+) -> None:
+    """Refuse a bridge build if manually copied credentials do not match production."""
+    if not legacy_config_path.is_file():
+        raise FileNotFoundError(
+            f"missing ignored production configuration: {legacy_config_path}"
+        )
+
+    secrets = yaml.safe_load(secrets_path.read_text())
+    legacy = yaml.safe_load(legacy_config_path.read_text())
+    if not isinstance(secrets, dict) or not isinstance(legacy, dict):
+        raise ValueError("migration secrets and legacy configuration must be YAML mappings")
+
+    api = legacy.get("api")
+    encryption = api.get("encryption") if isinstance(api, dict) else None
+    ota = legacy.get("ota")
+    ota_password = ota.get("password") if isinstance(ota, dict) else None
+    if isinstance(ota, list):
+        for platform in ota:
+            if isinstance(platform, dict) and platform.get("platform") == "esphome":
+                ota_password = platform.get("password")
+                break
+
+    expected = {
+        "api_encryption_key": (
+            encryption.get("key") if isinstance(encryption, dict) else None
+        ),
+        "legacy_ota_password": ota_password,
+    }
+    if wifi:
+        legacy_wifi = legacy.get("wifi")
+        expected.update(
+            {
+                "wifi_ssid": (
+                    legacy_wifi.get("ssid") if isinstance(legacy_wifi, dict) else None
+                ),
+                "wifi_password": (
+                    legacy_wifi.get("password")
+                    if isinstance(legacy_wifi, dict)
+                    else None
+                ),
+            }
+        )
+
+    mismatches = [key for key, value in expected.items() if secrets.get(key) != value]
+    if mismatches:
+        raise ValueError(
+            f"{secrets_path} does not match {legacy_config_path.name} for: "
+            + ", ".join(mismatches)
         )
 
 
@@ -212,6 +268,11 @@ def stage(args: argparse.Namespace) -> Path:
     validate_private_inputs(stream, secrets)
     require_private_file(secrets)
     require_device_credentials(secrets, args.device)
+    require_credentials_match_legacy_config(
+        secrets,
+        ROOT / "migrate_from" / f"{args.device}.yaml",
+        wifi=stream.slug.endswith("wifi"),
+    )
     require_private_file(stream.signing_key)
     dirty = require_clean_worktree(args.allow_dirty)
     published_release = verify_published_release(stream.slug, stream.signing_key)

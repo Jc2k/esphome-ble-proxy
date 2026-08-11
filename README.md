@@ -98,6 +98,10 @@ credentials to transfer.
 For the first Ethernet canary, use the guarded, device-specific
 [`ble3` worksheet](docs/ble3-migration.md). It stages immutable private
 artifacts and adds explicit go/no-go checks around the partition-table update.
+For the first Wi-Fi canary, use the guarded
+[`kitchen-proxy` worksheet](docs/kitchen-proxy-migration.md). It additionally
+proves that both Wi-Fi and API credentials survive in NVS before legacy OTA is
+removed.
 
 For one target device, copy `secrets.example.yaml` to the ignored
 `migrations/secrets.yaml` and replace the values with that device's current API
