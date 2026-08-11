@@ -227,6 +227,38 @@ def test_device_staging_matches_wifi_credentials_to_legacy_config(
     assert "wrong-network" not in str(error.value)
 
 
+def test_device_staging_resolves_legacy_esphome_secrets(tmp_path: Path) -> None:
+    secrets = tmp_path / "migration-secrets.yaml"
+    secrets.write_text(
+        'api_encryption_key: "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI="\n'
+        'legacy_ota_password: "device-specific-password"\n'
+        'wifi_ssid: "production-network"\n'
+        'wifi_password: "production-wifi-password"\n'
+    )
+    legacy_directory = tmp_path / "migrate_from"
+    legacy_directory.mkdir()
+    legacy = legacy_directory / "kitchen-proxy.yaml"
+    legacy.write_text(
+        'api:\n'
+        '  encryption:\n'
+        '    key: "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI="\n'
+        'ota:\n'
+        '  - platform: esphome\n'
+        '    password: "device-specific-password"\n'
+        'wifi:\n'
+        '  ssid: !secret wifi_ssid\n'
+        '  password: !secret wifi_passphrase\n'
+    )
+    legacy_secrets = legacy_directory / "secrets.yaml"
+    legacy_secrets.write_text(
+        'wifi_ssid: "production-network"\n'
+        'wifi_password: "production-wifi-password"\n'
+    )
+    legacy_secrets.chmod(0o600)
+
+    require_credentials_match_legacy_config(secrets, legacy, wifi=True)
+
+
 @pytest.mark.parametrize("value", ["10.192.170.143", "192.168.1.42"])
 def test_device_staging_accepts_reserved_ipv4(value: str) -> None:
     assert str(device_address(value)) == value

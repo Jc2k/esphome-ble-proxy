@@ -39,6 +39,21 @@ DEVICE_STREAMS = {
     "kitchen-proxy": "pico32-wifi",
 }
 
+_SECRET_REFERENCE = object()
+
+
+class _LegacyConfigLoader(yaml.SafeLoader):
+    pass
+
+
+def _construct_secret_reference(
+    loader: _LegacyConfigLoader, node: yaml.ScalarNode
+) -> tuple[object, str]:
+    return (_SECRET_REFERENCE, loader.construct_scalar(node))
+
+
+_LegacyConfigLoader.add_constructor("!secret", _construct_secret_reference)
+
 
 def device_address(value: str) -> IPv4Address:
     try:
@@ -118,6 +133,52 @@ def require_device_credentials(path: Path, device: str) -> None:
         )
 
 
+def _legacy_secret_store(legacy_config_path: Path) -> tuple[Path, dict]:
+    directory = legacy_config_path.parent.resolve()
+    root = ROOT.resolve()
+    while True:
+        candidate = directory / "secrets.yaml"
+        if candidate.is_file():
+            require_private_file(candidate)
+            values = yaml.safe_load(candidate.read_text())
+            if not isinstance(values, dict):
+                raise ValueError(f"{candidate} must contain a YAML mapping")
+            return candidate, values
+        if directory == root or root not in directory.parents:
+            break
+        directory = directory.parent
+    raise FileNotFoundError(
+        f"no secrets.yaml found for referenced values in {legacy_config_path}"
+    )
+
+
+def _resolve_legacy_secret(
+    value: object,
+    legacy_config_path: Path,
+    cached_store: list[tuple[Path, dict]],
+    fallback_name: str,
+) -> object:
+    if not (
+        isinstance(value, tuple)
+        and len(value) == 2
+        and value[0] is _SECRET_REFERENCE
+        and isinstance(value[1], str)
+    ):
+        return value
+    if not cached_store:
+        cached_store.append(_legacy_secret_store(legacy_config_path))
+    store_path, store = cached_store[0]
+    secret_name = value[1]
+    if secret_name in store:
+        return store[secret_name]
+    if fallback_name in store:
+        return store[fallback_name]
+    raise ValueError(
+        f"{store_path} has no value for !secret {secret_name} or its "
+        f"{fallback_name} migration alias used by {legacy_config_path.name}"
+    )
+
+
 def require_credentials_match_legacy_config(
     secrets_path: Path, legacy_config_path: Path, *, wifi: bool
 ) -> None:
@@ -128,7 +189,7 @@ def require_credentials_match_legacy_config(
         )
 
     secrets = yaml.safe_load(secrets_path.read_text())
-    legacy = yaml.safe_load(legacy_config_path.read_text())
+    legacy = yaml.load(legacy_config_path.read_text(), Loader=_LegacyConfigLoader)
     if not isinstance(secrets, dict) or not isinstance(legacy, dict):
         raise ValueError("migration secrets and legacy configuration must be YAML mappings")
 
@@ -163,6 +224,11 @@ def require_credentials_match_legacy_config(
             }
         )
 
+    cached_store: list[tuple[Path, dict]] = []
+    expected = {
+        key: _resolve_legacy_secret(value, legacy_config_path, cached_store, key)
+        for key, value in expected.items()
+    }
     mismatches = [key for key, value in expected.items() if secrets.get(key) != value]
     if mismatches:
         raise ValueError(
